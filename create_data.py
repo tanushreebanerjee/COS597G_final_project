@@ -6,6 +6,8 @@ import numpy as np
 from pathlib import Path
 from collections import defaultdict, Counter
 import re
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 
 def main(args):
     assert args.variant in [
@@ -27,7 +29,7 @@ def main(args):
     dir_path = Path(args.data_dir)
     orig_path = dir_path / args.dataset # nq or squad
     
-    if args.variant in ["random_one_vocab", "random_length_vocab"]:
+    if args.variant in ["random_one_vocab", "random_length_vocab", "gibberish"]:
         from english_words import english_words_set
         english_words_set = sorted(english_words_set)
     
@@ -68,9 +70,6 @@ def main(args):
         # nltk.download('punkt')
         
         ### "random_one" and "random_length" are only for squad dataset
-
-        from nltk.tokenize import word_tokenize
-        from nltk.corpus import stopwords
         
         stop_words = set(stopwords.words('english'))   
         
@@ -84,7 +83,7 @@ def main(args):
                 all_context_words = word_tokenize(context)
                 filtered_context_words = [w for w in all_context_words if not w.lower() in stop_words]
                 
-                ### follow distribution of context
+                ### follow distribution of context; may require a change
                 filtered_context_words_counter = Counter(filtered_context_words)
                 filtered_context_words_distribution = {word: filtered_context_words_counter[word] / len(filtered_context_words) 
                                                        for word in filtered_context_words_counter}
@@ -96,16 +95,43 @@ def main(args):
                 dp_ans_new.append(" ".join(rand_words))
             dp["answer"] = dp_ans_new
     
-    elif args.variant == "permute_context":
+    elif args.variant == "repeat_one_sent":
         ### Permute sentences given a context
         
         for i, dp in enumerate(train_data):
-            context = re.sub(r'[^\w\s]', '', dp["context"])
-            all_context_words = word_tokenize(context)
-            filtered_context_words = [w for w in all_context_words if not w.lower() in stop_words]
+            sentences = dp["context"].split(".")
+            idx = np.random.choice(len(sentences), 1)[0]
+            repeat_sent = sentences[idx]
+            
+            if args.repeat_times == "None":
+                repeat_times = len(sentences)
+            else:
+                repeat_times = int(args.repeat_times)
+            
+            final_context = sentences[:idx] + [repeat_sent] * repeat_times + sentences[idx+1:]
+            dp["context"] = ".".join(final_context)
+    
+    elif args.variant == "gibberish":
+        # randomly insert one gibberish sentence
+        
+        for i, dp in enumerate(train_data):
+            sentences = dp["context"].split(".")
+            idx = np.random.randint(len(sentences), size=1)[0]
+            
+            ### calculate mean of all sentences
+            total_len = 0
+            for sent in sentences:
+                filtered_sent = re.sub(r'[^\w\s]', '', sent)
+                total_len += len(word_tokenize(filtered_sent))
+            mean_len = int(total_len / len(sentences))
+            
+            rand_words = list(np.random.choice(english_words_set, size = mean_len, replace = False))
+            
+            final_context = sentences[:idx] + [" ".join(rand_words) + ". "] + sentences[idx:]
+            dp["context"] = ".".join(final_context)
             
             
-    with open(orig_path / f"train_{args.variant}_{args.seed}_{args.k}.jsonl", "w") as f:
+    with open(orig_path / f"train_{args.variant}_{args.seed}_{args.k}_{args.repeat_times}.jsonl", "w") as f:
         for dp in train_data:
             f.write(json.dumps(dp))
             f.write("\n")
@@ -119,6 +145,10 @@ if __name__ == "__main__":
     parser.add_argument("--k", type=int, default=16)
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
+    
+    # repeat_times is used in repeat_one_sent, 
+    # controls the number of times to repeat the random sentence
+    parser.add_argument("--repeat_times", type=str, default="None")
 
     parser.add_argument("--data_dir", type=str, default="data")
     parser.add_argument("--corpus_path", type=str, default=None)
