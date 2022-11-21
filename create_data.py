@@ -10,6 +10,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
 def main(args):
+    assert args.dataset in ['nq', 'squad']
+    
     assert args.variant in [
         "gold", 
         "random_one", "random_length", # randomly select from current context
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--dataset", type=str, default=None, required=True)
     parser.add_argument("--k", type=int, default=16)
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
