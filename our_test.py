@@ -13,31 +13,35 @@ from tqdm import tqdm
 from collections import Counter, defaultdict
 
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
-from transformers import GPT2Tokenizer, AutoTokenizer
+from transformers import GPT2Tokenizer, AutoTokenizer, GPT2Model
 
 from icl.data import Data
-from icl.model import Model
+#from icl.model import Model
+
+from transformers import pipeline, set_seed
 
 from utils.our_data import load_data
 
 def main(logger, args):
-
-    if args.gpt2.startswith("gpt2"):
-        tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
-        add_newlines = False
-    else:
-        # args.gpt2=="gpt-j-6B":
-        # we are using the HF veresion where GPT-J-6B checkpoint is not officially registered
-        # so need to download the model checkpoint and specify checkpoint
-        tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        add_newlines = True
-        assert args.checkpoint is not None and os.path.exists(args.checkpoint)
-        args.gpt2 = args.checkpoint
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    add_newlines = False
+    # if args.gpt2.startswith("gpt2"):
+        #tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
+        #add_newlines = False
+    # else:
+    #     # args.gpt2=="gpt-j-6B":
+    #     # we are using the HF veresion where GPT-J-6B checkpoint is not officially registered
+    #     # so need to download the model checkpoint and specify checkpoint
+    #     tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    #     add_newlines = True
+    #     assert args.checkpoint is not None and os.path.exists(args.checkpoint)
+    #     args.gpt2 = args.checkpoint
 
     checkpoint = None
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
-    metaicl_model = MetaICLModel(logger, args.out_dir)
+    #metaicl_model = MetaICLModel(logger, args.out_dir)
+    gpt2_model = GPT2Model.from_pretrained('gpt2')
 
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
@@ -51,7 +55,7 @@ def main(logger, args):
     logger.info("batch_size=%d\tmax_length=%d\tmax_length_per_example=%d" % (args.test_batch_size, max_length, max_length_per_example))
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
-    metaicl_data = MetaICLData(logger, tokenizer, args.method, args.use_demonstrations, args.k, max_length, max_length_per_example)
+    gpt2_data = Data(logger, tokenizer, args.method, args.use_demonstrations, args.k, max_length, max_length_per_example)
 
     results = []
     errors = []
@@ -105,7 +109,8 @@ def main(logger, args):
                     curr_dev_data[dp_idx]["options"] = new_options
 
             ## WILL NEED TO CHANGE
-            result = run(logger, dataset, metaicl_data, metaicl_model, curr_train_data, curr_dev_data, seed, checkpoint, is_classification, add_newlines)
+            #result = run(logger, dataset, metaicl_data, metaicl_model, curr_train_data, curr_dev_data, seed, checkpoint, is_classification, add_newlines)
+            result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_dev_data, seed, checkpoint, is_classification, add_newlines)
 
             if result is None:
                 errors.append("%s/%s" % (test_task, seed))
@@ -119,20 +124,20 @@ def main(logger, args):
         logger.info("You had errors with datasets:", ",".join(errors))
         logger.info("Please see the error messages")
 
-def run(logger, dataset, metaicl_data, metaicl_model, train_data, dev_data, seed, checkpoint, is_classification, add_newlines):
+def run(logger, dataset, gpt2_data, gpt2_model, train_data, dev_data, seed, checkpoint, is_classification, add_newlines):
 
     cache_path = os.path.join(args.out_dir,
                               "{}-{}-{}{}{}{}{}.pkl".format(
                                   task,
                                   "test",
-                                  metaicl_data.method,
+                                  gpt2_data.method,
                                   "-k={}".format(args.k) if args.use_demonstrations else "",
                                   "-s={}".format(seed) if args.use_demonstrations or args.use_random_english_words else "",
                                   "" if add_newlines else "-no-newlines",
                                   "-randomEnglish" if args.use_random_english_words else ""))
 
-    metaicl_data.tensorize(train_data, dev_data, add_newlines=add_newlines)
-    metaicl_data.print_tensorized_example()
+    gpt2_data.tensorize(train_data, dev_data, add_newlines=add_newlines)
+    gpt2_data.print_tensorized_example()
     logger.info(cache_path)
     prediction_path = cache_path.replace(".pkl", ".txt")
 
@@ -142,23 +147,30 @@ def run(logger, dataset, metaicl_data, metaicl_model, train_data, dev_data, seed
     if os.path.exists(cache_path):
         with open(cache_path, "rb") as f:
             losses = pkl.load(f)
-    else:
-        if metaicl_model.is_none():
-            metaicl_model.load(checkpoint, gpt2=args.gpt2)
-            metaicl_model.cuda()
-            metaicl_model.eval()
+    
+    #tanushree edits start Fri 25 Nov
+    #else:
+        #dont think we need this?
+        # if gpt2_model.is_none():
+        #     gpt2_model.load(checkpoint, gpt2=args.gpt2)
+        #     gpt2_model.cuda()
+        #     gpt2_model.eval()
 
         ## NEED TO CHANGE
-        losses = metaicl_model.do_inference(metaicl_data, args.test_batch_size)
-        with open(cache_path, "wb") as f:
-            pkl.dump(losses, f)
+    #     losses = gpt2_model.do_inference(gpt2_data, args.test_batch_size)
+    #     with open(cache_path, "wb") as f:
+    #         pkl.dump(losses, f)
 
-    assert len(losses)==len(metaicl_data)
+    # assert len(losses)==len(gpt2_data)
 
     ## NEED TO CHANGE EVERYTHING
-    predictions = metaicl_model.do_predict(metaicl_data, losses=losses)
+    #predictions = gpt2_model.do_predict(gpt2_data, losses=losses)
+    
+    predictions = gpt2_model.predict(**gpt2_data)
+    # tanushree edits end Fri 25 Nov
+    
     groundtruths = [dp["output"] for dp in dev_data]
-    perf = metaicl_data.evaluate(predictions, groundtruths, is_classification)
+    perf = gpt2_data.evaluate(predictions, groundtruths, is_classification)
     logger.info("Accuracy=%s" % perf)
 
     with open(prediction_path, "w") as f:
