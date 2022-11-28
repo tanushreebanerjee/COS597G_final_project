@@ -95,12 +95,12 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
                               "{}-{}-{}{}{}{}.pkl".format(
                                   dataset,
                                   "test",
-                                  data.method,
+                                  gpt2_data.method,
                                   "-k={}".format(args.k) if args.use_demonstrations else "",
                                   "-s={}".format(seed) if args.use_demonstrations else "",
                                   "" if add_newlines else "-no-newlines"))
 
-    gpt2_data.tensorize(train_data, dev_data, add_newlines=add_newlines)
+    gpt2_data.tensorize(train_data, test_data, add_newlines=add_newlines)
     print(gpt2_data.print_tensorized_example(return_string=True))
     logger.info(cache_path)
     prediction_path = cache_path.replace(".pkl", ".txt")
