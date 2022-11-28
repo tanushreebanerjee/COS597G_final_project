@@ -63,16 +63,16 @@ def main(logger, args):
     for seed in seeds:
 
         train_data = load_data("train", args.k, datasets, seed=seed)
-        dev_data = load_data("test", args.k, datasets, seed=seed)
+        test_data = load_data("test", args.k, datasets, seed=seed)
 
         for dataset in datasets:
             curr_train_data = train_data[dataset]
-            curr_dev_data = dev_data[dataset]
+            curr_test_data = test_data[dataset]
 
             ## NUMBER OF DEMONSTRATIONS SHOULD MATCH THE ARGUMENT PROVIDED
             assert not args.use_demonstrations or len(curr_train_data)==args.k
 
-            logger.info("%s - %s on %s (%d train, %d dev)" % (args.gpt2, args.method, args.dataset, len(curr_train_data), len(curr_dev_data)))
+            logger.info("%s - %s on %s (%d train, %d dev)" % (args.gpt2, args.method, args.dataset, len(curr_train_data), len(curr_test_data)))
 
             result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
 
