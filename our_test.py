@@ -65,11 +65,6 @@ def main(logger, args):
         train_data = load_data("train", args.k, datasets, seed=seed)
         dev_data = load_data("test", args.k, datasets, seed=seed)
 
-        if args.use_random_english_words:
-            from english_words import english_words_set
-            english_words_set = sorted(english_words_set)
-            np.random.seed(int(seed))
-
         for dataset in datasets:
             curr_train_data = train_data[dataset]
             curr_dev_data = dev_data[dataset]
