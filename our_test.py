@@ -15,27 +15,25 @@ from collections import Counter, defaultdict
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from transformers import GPT2Tokenizer, AutoTokenizer, GPT2Model
 
-from icl.data import Data
-#from icl.model import Model
-
-from transformers import pipeline, set_seed
+from our_data import GPT2Data
 
 from utils.our_data import load_data
 
+from transformers import pipeline, set_seed
+
 def main(logger, args):
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    add_newlines = False
-    # if args.gpt2.startswith("gpt2"):
-        #tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
-        #add_newlines = False
-    # else:
-    #     # args.gpt2=="gpt-j-6B":
-    #     # we are using the HF veresion where GPT-J-6B checkpoint is not officially registered
-    #     # so need to download the model checkpoint and specify checkpoint
-    #     tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    #     add_newlines = True
-    #     assert args.checkpoint is not None and os.path.exists(args.checkpoint)
-    #     args.gpt2 = args.checkpoint
+
+    if args.gpt2.startswith("gpt2"):
+        tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
+        add_newlines = False
+    else:
+        # args.gpt2=="gpt-j-6B":
+        # we are using the HF veresion where GPT-J-6B checkpoint is not officially registered
+        # so need to download the model checkpoint and specify checkpoint
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        add_newlines = True
+        assert args.checkpoint is not None and os.path.exists(args.checkpoint)
+        args.gpt2 = args.checkpoint
 
     checkpoint = None
 
@@ -55,7 +53,7 @@ def main(logger, args):
     logger.info("batch_size=%d\tmax_length=%d\tmax_length_per_example=%d" % (args.test_batch_size, max_length, max_length_per_example))
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
-    gpt2_data = Data(logger, tokenizer, args.method, args.use_demonstrations, args.k, max_length, max_length_per_example)
+    gpt2_data = GPT2Data(logger, tokenizer, args.method, args.use_demonstrations, args.k, max_length, max_length_per_example)
 
     results = []
     errors = []
@@ -64,7 +62,6 @@ def main(logger, args):
 
     for seed in seeds:
 
-        ### TODO: NEED TO CHANGE LOAD_DATA TO NOT ACCEPT "TASK" and "config_split"
         train_data = load_data("train", args.k, datasets, seed=seed)
         dev_data = load_data("test", args.k, datasets, seed=seed)
 
@@ -82,35 +79,7 @@ def main(logger, args):
 
             logger.info("%s - %s on %s (%d train, %d dev)" % (args.gpt2, args.method, args.dataset, len(curr_train_data), len(curr_dev_data)))
 
-            config_file = "config/tasks/{}.json".format(dataset)
-            assert os.path.exists(config_file), config_file
-            with open(config_file, "r") as f:
-                config = json.load(f)
-
-            ## WHAT SHOULD I DO ABOUT THIS
-            is_classification = config["task_type"]=="classification"
-            if is_classification:
-                options = curr_dev_data[0]["options"]
-                assert np.all([d["options"]==options for d in curr_dev_data])
-
-            ## SEEMS LIKE USELESS CODE
-            if args.use_random_english_words:
-                # create a mapping
-                options = curr_dev_data[0]["options"]
-                mapping = {option: np.random.choice(english_words_set) for option in options}
-                new_options = list(mapping.values())
-                for dp_idx, dp in enumerate(curr_train_data):
-                    assert dp["output"] in options, (dp, options)
-                    curr_train_data[dp_idx]["output"] = mapping[dp["output"]]
-                    curr_train_data[dp_idx]["options"] = new_options
-                for dp_idx, dp in enumerate(curr_dev_data):
-                    assert dp["output"] in options, (dp, options)
-                    curr_dev_data[dp_idx]["output"] = mapping[dp["output"]]
-                    curr_dev_data[dp_idx]["options"] = new_options
-
-            ## WILL NEED TO CHANGE
-            #result = run(logger, dataset, metaicl_data, metaicl_model, curr_train_data, curr_dev_data, seed, checkpoint, is_classification, add_newlines)
-            result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_dev_data, seed, checkpoint, is_classification, add_newlines)
+            result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
 
             if result is None:
                 errors.append("%s/%s" % (test_task, seed))
@@ -118,26 +87,26 @@ def main(logger, args):
                 results.append(result)
 
 
-    #logger.info("Macro-F1 of %s over %d target tasks: %.1f" % (args.task, len(results) // len(seeds), 100*np.mean(results)))
+    print("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(results) // len(seeds), 100 * np.mean(results)))
+    logger.info("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(results) // len(seeds), 100 * np.mean(results)))
 
     if len(errors)>0:
         logger.info("You had errors with datasets:", ",".join(errors))
         logger.info("Please see the error messages")
 
-def run(logger, dataset, gpt2_data, gpt2_model, train_data, dev_data, seed, checkpoint, is_classification, add_newlines):
+def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, checkpoint, add_newlines):
 
     cache_path = os.path.join(args.out_dir,
-                              "{}-{}-{}{}{}{}{}.pkl".format(
-                                  task,
+                              "{}-{}-{}{}{}{}.pkl".format(
+                                  dataset,
                                   "test",
-                                  gpt2_data.method,
+                                  data.method,
                                   "-k={}".format(args.k) if args.use_demonstrations else "",
-                                  "-s={}".format(seed) if args.use_demonstrations or args.use_random_english_words else "",
-                                  "" if add_newlines else "-no-newlines",
-                                  "-randomEnglish" if args.use_random_english_words else ""))
+                                  "-s={}".format(seed) if args.use_demonstrations else "",
+                                  "" if add_newlines else "-no-newlines"))
 
     gpt2_data.tensorize(train_data, dev_data, add_newlines=add_newlines)
-    gpt2_data.print_tensorized_example()
+    print(gpt2_data.print_tensorized_example(return_string=True))
     logger.info(cache_path)
     prediction_path = cache_path.replace(".pkl", ".txt")
 
@@ -147,7 +116,15 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, dev_data, seed, chec
     if os.path.exists(cache_path):
         with open(cache_path, "rb") as f:
             losses = pkl.load(f)
-    
+    else:
+        dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
+        for batch in dataloader:
+            input_ids = batch[0]
+            attention_mask = batch[1]
+            print(gpt2_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state)
+
+    return 1
+
     #tanushree edits start Fri 25 Nov
     #else:
         #dont think we need this?
@@ -165,10 +142,10 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, dev_data, seed, chec
 
     ## NEED TO CHANGE EVERYTHING
     #predictions = gpt2_model.do_predict(gpt2_data, losses=losses)
-    
+
     predictions = gpt2_model.predict(**gpt2_data)
     # tanushree edits end Fri 25 Nov
-    
+
     groundtruths = [dp["output"] for dp in dev_data]
     perf = gpt2_data.evaluate(predictions, groundtruths, is_classification)
     logger.info("Accuracy=%s" % perf)
@@ -184,8 +161,6 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
 
-    ## MIGHT DELETE LATER
-    #parser.add_argument("--do_zeroshot", default=False, action="store_true")
     ## WHETHER WE USE DEMONSTRATIONS OR NOT
     parser.add_argument("--use_demonstrations", default=False, action="store_true")
     ## SPECIFY PATH TO LOG FILE
@@ -196,30 +171,28 @@ if __name__=='__main__':
     ## NUMBER OF DEMONSTRATIONS
     parser.add_argument("--k", type=int, default=16)
     ## RANDOM SEED
-    parser.add_argument("--seed", type=str, default="100")
+    parser.add_argument("--seed", type=str, default="42")
     ## SUGGESTED VALUES
     ## 64 / 16 for GPT-2 with no demonstrations / few-shot
     ## 16 / 4  for GPT-J with no demonstratiosn / few-shot
-    parser.add_argument("--test_batch_size", type=int, default=64)
+    parser.add_argument("--test_batch_size", type=int, default=1)
     ## STORED MODEL CHECKPOINT (NEEDED IF WE NEED TO RUN GPT-J)
     parser.add_argument("--checkpoint", type=str, default=None)
 
-    ## MIGHT DELETE LATER
-    parser.add_argument("--use_random_english_words", default=False, action="store_true")
     ## PATH TO OUTPUT
     parser.add_argument("--out_dir", type=str, required=True)
-    ## WHAT IS THIS?
-    #parser.add_argument("--split", type=str, default="test")
-    #parser.add_argument("--is_null", default=False, action="store_true")
     ## SPECIFY THE MODEL TO RUN
     parser.add_argument("--gpt2", type=str, default="gpt2-large")
+
+    parser.add_argument("--method", type=str, default="direct")
 
     args = parser.parse_args()
 
     handlers = [logging.StreamHandler()]
     if args.log_file is not None:
         handlers.append(logging.FileHandler(args.log_file))
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    logging.basicConfig(filename="logger.log",
+                        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO,
                         handlers=handlers)
