@@ -4,6 +4,7 @@ import json
 import string
 import numpy as np
 import torch
+from collections import Counter
 
 def load_data(split, k, datasets, seed=0):
     data = {}
@@ -18,3 +19,68 @@ def load_data(split, k, datasets, seed=0):
                 curr_data.append(dp)
         data[dataset] = curr_data
     return data
+
+## https://kierszbaumsamuel.medium.com/f1-score-in-nlp-span-based-qa-task-5b115a5e7d41
+## https://qa.fastforwardlabs.com/no%20answer/null%20threshold/bert/distilbert/exact%20match/f1/robust%20predictions/2020/06/09/Evaluating_BERT_on_SQuAD.html#Metrics-for-QA
+def normalize_text(s):
+    """Removing articles and punctuation, and standardizing whitespace are all typical text processing steps."""
+    import string, re
+
+    def remove_articles(text):
+        regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+        return re.sub(regex, " ", text)
+
+    def white_space_fix(text):
+        return " ".join(text.split())
+
+    def remove_punc(text):
+        exclude = set(string.punctuation)
+        return "".join(ch for ch in text if ch not in exclude)
+
+    def lower(text):
+        return text.lower()
+
+    return white_space_fix(remove_articles(remove_punc(lower(s))))
+
+def compute_exact_match(prediction, groundtruth):
+    return int(prediction in groundtruth)
+
+def compute_f1(prediction, groundtruth):
+    precisions = []
+    recalls = []
+    f1 = []
+
+    for gt in groundtruth:
+        common = Counter(prediction) & Counter(gt)
+        num_same = sum(common.values())
+        if len(prediction) == 0 or len(gt) == 0:
+            f1.append(int(prediction == gt))
+            continue
+
+        if num_same == 0:
+            f1.append(0)
+            continue
+
+        precision = 1.0 * num_same / len(prediction)
+        recall = 1.0 * num_same / len(gt)
+
+        f1.append(2 * precision * recall) / (precision + recall)
+
+    return np.max(f1)
+
+
+def evaluate(predictions, groundtruths):
+    accs = []
+    f1s = []
+    for prediction, groundtruth in zip(predictions, groundtruths):
+        prediction = normalize_text(prediction)
+        groundtruth = [normalize_text(gt) for gt in groundtruth] if type(groundtruth)==list else [normalize_text(gt)]
+
+        for gt in groundtruth:
+            is_correct = is_correct or prediction == gt
+
+
+        accs.append(compute_exact_match(prediction, groundtruth))
+        f1s.append(compute_f1(prediction, groundtruth))
+
+    return np.mean(accs), np.mean(f1s)

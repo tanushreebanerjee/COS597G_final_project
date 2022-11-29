@@ -106,33 +106,11 @@ class GPT2Data(object):
         if self.local_rank<=0:
             self.logger.info(text)
 
-    def evaluate(self, predictions, groundtruths):
-        assert len(predictions)==len(self.metadata)
-        accs = []
-        precisions = defaultdict(list)
-        recalls = defaultdict(list)
-        for prediction, groundtruth in zip(predictions, groundtruths):
-            prediction = prediction.strip()
-            groundtruth = [gt.strip() for gt in groundtruth] if type(groundtruth)==list else groundtruth.strip()
-            is_correct = prediction in groundtruth if type(groundtruth)==list else prediction==groundtruth
-            accs.append(is_correct)
-            if is_classification:
-                recalls[groundtruth].append(is_correct)
-                precisions[prediction].append(is_correct)
-
-        f1s = []
-        for key in recalls:
-            precision = np.mean(precisions[key]) if key in precisions else 1.0
-            recall = np.mean(recalls[key])
-            if precision+recall==0:
-                f1s.append(0)
-            else:
-                f1s.append(2*precision*recall / (precision+recall))
-
-        return np.mean(f1s)
-
     def _prepro_each_datapoint(self, dp, is_first=True, is_training=False, for_demonstrations=False, add_newlines=True):
         dp = dp.copy()
+
+        assert type(dp["output"]) == list
+        dp["output"] = dp["output"][0]
 
         ## GPT-J
         if add_newlines:
@@ -216,6 +194,18 @@ class GPT2Data(object):
         else:
             raise NotImplementedError()
 
+    def prepro_sentence_pair_single(self, input, max_length, allow_truncation=False):
+
+        if allow_truncation and len(input) > max_length:
+            input = input[len(input)-max_length:]
+            assert len(input)==max_length
+
+        n_mask = max_length-len(input)
+        assert n_mask>=0, (max_length, len(input))
+        input_ids = input+[0 for _ in range(n_mask)]
+        attention_mask = [1 for _ in input] + [0 for _ in range(n_mask)]
+        return input_ids, attention_mask
+
     def tensorize(self, _train_data, _test_data, add_newlines=True):
 
         train_data, test_data = [], []
@@ -223,12 +213,14 @@ class GPT2Data(object):
             for dp in _train_data:
                 assert type(dp)==dict, ("Each example should be a dictionary", dp)
                 assert "input" in dp and "output" in dp, ("Training example should contain input and output", dp)
+                if type(dp["output"])==str:
+                    dp["output"] = [dp["output"]]
                 train_data.append(dp.copy())
         for dp in _test_data:
             assert type(dp)==dict, ("Each example should be a dictionary", dp)
-            assert "input" in dp, ("Test example should contain input", dp)
-            if "output" not in dp:
-                dp["output"] = "hello" # randomly choose one (we don't need it anyways)
+            assert "input" in dp and "output" in dp, ("Test example should contain input and output", dp)
+            if type(dp["output"])==str:
+                dp["output"] = [dp["output"]]
             test_data.append(dp.copy())
 
         # each datapoint: passage, question, options, output
@@ -250,28 +242,15 @@ class GPT2Data(object):
 
             indices = [[i] for i in range(len(input_ids), len(input_ids)+len(input_))]
 
-            metadata.append({"indices": indices, "answer": output_})
+            metadata.append({"indices": indices})
 
             if self.use_demonstrations:
                 input_ = demonstrations + input_
 
-            input_ids_, attention_mask_ = prepro_sentence_pair_single(input_, self.max_length, allow_truncation=self.use_demonstrations)
+            input_ids_, attention_mask_ = self.prepro_sentence_pair_single(input_, self.max_length, allow_truncation=self.use_demonstrations)
 
             input_ids.append(input_ids_)
             attention_mask.append(attention_mask_)
 
         self.tensorized_inputs = dict(input_ids=torch.LongTensor(input_ids), attention_mask=torch.LongTensor(attention_mask))
         self.metadata = metadata
-
-
-def prepro_sentence_pair_single(input, max_length, allow_truncation=False):
-
-    if allow_truncation and len(input) > max_length:
-        input = input[len(input)-max_length:]
-        assert len(input)==max_length
-
-    n_mask = max_length-len(input)
-    assert n_mask>=0, (max_length, len(input))
-    input_ids = input+[0 for _ in range(n_mask)]
-    attention_mask = [1 for _ in input] + [0 for _ in range(n_mask)]
-    return input_ids, attention_mask
