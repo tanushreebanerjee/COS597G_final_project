@@ -9,9 +9,10 @@ import re
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
+
 def main(args):
     assert args.dataset in ['nq', 'squad']
-    
+
     assert args.variant in [
         "gold", 
         "random_one", "random_length", # randomly select from current context
@@ -21,30 +22,40 @@ def main(args):
         "repeat_one_sent", # S1, S2, S2, S2, S2, S3, S4 
         "gibberish" # S1, gibberish, S2, S3, gibberish, S4
     ]
-    
+
     np.random.seed(int(args.seed))
-    
+
     if args.variant == "gold":
         print ("No need to run `create_data.py` --- you can use the original data as it is.")
         return
-    
+
     dir_path = Path(args.data_dir)
     orig_path = dir_path / args.dataset # nq or squad
-    
+
+
     if args.variant in ["random_one_vocab", "random_length_vocab", "gibberish"]:
         from english_words import english_words_set
         english_words_set = sorted(english_words_set)
-    
-    
-    train_data = []
-    with open(orig_path / "train_orig.jsonl", "r") as fin:
+
+    new_data, orig_data = [], []
+    with open(orig_path / f"{args.type}_orig.jsonl", "r") as fin: # either train_orig.jsonl or test_orig.jsonl
         for k, example in enumerate(fin):
             example = json.loads(example)
-            train_data.append(example)
-    
+            orig_data.append(example)
+
+
+    ### randomly choose k data 
+    k = int(args.k)
+    n = len(orig_data)
+    indices = np.random.choice(n, k)
+
     if args.variant in ["random_one_vocab", "random_length_vocab"]:
-        
-        for i, dp in enumerate(train_data):
+        ### randomly choose one or length english words in the vocabulary as answers 
+
+        for i in indices:
+            dp = orig_data[i]
+
+            # choose random words
             dp_ans_new = []
             for ans in dp["answer"]:
                 dp_ans_orig_len = len(ans.split())
@@ -52,30 +63,32 @@ def main(args):
                     dp_ans_orig_len = 1
                 rand_words = list(np.random.choice(english_words_set, size = dp_ans_orig_len, replace = False))
                 dp_ans_new.append(" ".join(rand_words))
-            
-            dp["answer"] = dp_ans_new
-    
+
+            new_data.append({
+                "input": dp["question"],
+                "output": dp_ans_new
+            })
+
     elif args.variant == "permute":
-        k = int(args.k)
-        for i in range(0, len(train_data), k):
-            curr_batch = train_data[i:i+k+1]
-            curr_batch_ans = [dp["answer"] for dp in curr_batch] # this creates a new list
-            np.random.shuffle(curr_batch_ans)
-            
-            for idx, dp in enumerate(curr_batch):
-                dp["answer"] = curr_batch_ans[idx]
-    
+        curr_batch = [orig_data[i] for i in indices]
+        curr_batch_ans = [dp["answer"] for dp in curr_batch]
+        np.random.shuffle(curr_batch_ans)
+
+        for idx, dp in enumerate(curr_batch):
+            new_data.append({
+                "input": dp["question"], 
+                "output": curr_batch_ans[idx]
+            })
+
     elif args.variant in ["random_one", "random_length"]:
-        ### download first
-        # import nltk
-        # nltk.download('stopwords')
-        # nltk.download('punkt')
-        
-        ### "random_one" and "random_length" are only for squad dataset
-        
-        stop_words = set(stopwords.words('english'))   
-        
-        for i, dp in enumerate(train_data):
+        ### Permute sentences given a context
+
+        assert args.dataset == "squad"
+
+        stop_words = set(stopwords.words("english"))
+
+        for i in indices:
+            dp = orig_data[i]
             dp_ans_new = []
             for ans in dp["answer"]:
                 dp_ans_orig_len = len(ans.split())
@@ -95,28 +108,20 @@ def main(args):
                                                    p = list(filtered_context_words_distribution.values())))
                 
                 dp_ans_new.append(" ".join(rand_words))
-            dp["answer"] = dp_ans_new
-    
-    elif args.variant == "repeat_one_sent":
-        ### Permute sentences given a context
-        
-        for i, dp in enumerate(train_data):
-            sentences = dp["context"].split(".")
-            idx = np.random.choice(len(sentences), 1)[0]
-            repeat_sent = sentences[idx]
-            
-            if args.repeat_times == "None":
-                repeat_times = len(sentences)
-            else:
-                repeat_times = int(args.repeat_times)
-            
-            final_context = sentences[:idx] + [repeat_sent] * repeat_times + sentences[idx+1:]
-            dp["context"] = ".".join(final_context)
-    
+
+            new_data.append({
+                "input": dp["context"] + " Question: " +  dp["question"], 
+                "output": dp_ans_new    
+            })
+
     elif args.variant == "gibberish":
-        # randomly insert one gibberish sentence
-        
-        for i, dp in enumerate(train_data):
+        ### Randomly insert one gibberish sentence
+
+        assert args.dataset == "squad"
+
+        for i in indices:
+            dp = orig_data[i]
+
             sentences = dp["context"].split(".")
             idx = np.random.randint(len(sentences), size=1)[0]
             
@@ -131,30 +136,31 @@ def main(args):
             
             final_context = sentences[:idx] + [" ".join(rand_words) + ". "] + sentences[idx:]
             dp["context"] = ".".join(final_context)
-            
-            
-    with open(orig_path / f"train_{args.variant}_{args.seed}_{args.k}_{args.repeat_times}.jsonl", "w") as f:
-        for dp in train_data:
-            f.write(json.dumps(dp))
-            f.write("\n")
+
+            new_data.append({
+                "input": dp["context"] + " Question: " + dp["question"], 
+                "output": dp["answer"]
+            })
+    
+    if not os.path.isdir(orig_path / args.variant):
+        os.makedirs(orig_path / args.variant)
+
+    with open(orig_path / args.variant / f"{args.dataset}_{args.k}_{args.seed}_{args.type}.jsonl", "w") as f:
+        for dp in new_data:
+            f.write(json.dumps(dp) + "\n")
     
 
-if __name__ == "__main__":
-    
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-
-    parser.add_argument("--dataset", type=str, default=None, required=True)
-    parser.add_argument("--k", type=int, default=16)
+    parser.add_argument('--data_dir', type=str, default="data")
+    
+    parser.add_argument("--dataset", type=str, default=None, required=True, help="nq or squad")
+    parser.add_argument("--type", type=str, default="train", help="The type of data: train or test")
+    parser.add_argument("--k", type=int, default=16, help="Number of demonstrations")
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
-    
-    # repeat_times is used in repeat_one_sent, 
-    # controls the number of times to repeat the random sentence
     parser.add_argument("--repeat_times", type=str, default="None")
-
-    parser.add_argument("--data_dir", type=str, default="data")
-    parser.add_argument("--corpus_path", type=str, default=None)
-
+    
+    
     args = parser.parse_args()
-
     main(args)
