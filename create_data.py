@@ -64,8 +64,13 @@ def main(args):
                 rand_words = list(np.random.choice(english_words_set, size = dp_ans_orig_len, replace = False))
                 dp_ans_new.append(" ".join(rand_words))
 
+            if args.dataset == "squad":
+                inp = dp["context"] + " Question: " +  dp["question"]
+            elif args.dataset == "nq":
+                inp = dp["question"]
+
             new_data.append({
-                "input": dp["question"],
+                "input": inp,
                 "output": dp_ans_new
             })
 
@@ -75,8 +80,13 @@ def main(args):
         np.random.shuffle(curr_batch_ans)
 
         for idx, dp in enumerate(curr_batch):
+            if args.dataset == "squad":
+                inp = dp["context"] + " Question: " +  dp["question"]
+            elif args.dataset == "nq":
+                inp = dp["question"]
+
             new_data.append({
-                "input": dp["question"], 
+                "input": inp, 
                 "output": curr_batch_ans[idx]
             })
 
