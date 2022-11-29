@@ -141,8 +141,10 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     predictions = gpt2_model.predict(**gpt2_data)
     # tanushree edits end Fri 25 Nov
 
-    groundtruths = [dp["output"] for dp in dev_data]
-    perf = gpt2_data.evaluate(predictions, groundtruths, is_classification)
+    groundtruths = [dp["output"] for dp in test_data]
+
+
+    perf = evaluate(predictions, groundtruths)
     logger.info("Accuracy=%s" % perf)
 
     with open(prediction_path, "w") as f:
