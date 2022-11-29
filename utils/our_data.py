@@ -50,8 +50,12 @@ def compute_f1(prediction, groundtruth):
     recalls = []
     f1 = []
 
+    prediction_words = prediction.split(" ")
+
     for gt in groundtruth:
-        common = Counter(prediction) & Counter(gt)
+        gt_words = gt.split(" ")
+        common = Counter(prediction_words) & Counter(gt_words)
+        print(common)
         num_same = sum(common.values())
         if len(prediction) == 0 or len(gt) == 0:
             f1.append(int(prediction == gt))
@@ -61,10 +65,15 @@ def compute_f1(prediction, groundtruth):
             f1.append(0)
             continue
 
-        precision = 1.0 * num_same / len(prediction)
-        recall = 1.0 * num_same / len(gt)
+        print("prediction: %s\n" % (prediction))
+        print("groundtruth: %s\n" % (gt))
+        print("num_same: %d\n" % (num_same))
+        precision = 1.0 * num_same / len(prediction_words)
+        recall = 1.0 * num_same / len(gt_words)
+        print("precision: %f\n" % (precision))
+        print("recall: %f\n" % (recall))
 
-        f1.append(2 * precision * recall) / (precision + recall)
+        f1.append(2 * precision * recall / (precision + recall))
 
     return np.max(f1)
 
@@ -74,13 +83,11 @@ def evaluate(predictions, groundtruths):
     f1s = []
     for prediction, groundtruth in zip(predictions, groundtruths):
         prediction = normalize_text(prediction)
-        groundtruth = [normalize_text(gt) for gt in groundtruth] if type(groundtruth)==list else [normalize_text(gt)]
-
-        for gt in groundtruth:
-            is_correct = is_correct or prediction == gt
-
+        groundtruth = [normalize_text(gt) for gt in groundtruth] if type(groundtruth)==list else [normalize_text(groundtruth)]
 
         accs.append(compute_exact_match(prediction, groundtruth))
+
+
         f1s.append(compute_f1(prediction, groundtruth))
 
-    return np.mean(accs), np.mean(f1s)
+    return accs, f1s
