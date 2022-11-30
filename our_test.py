@@ -62,8 +62,8 @@ def main(logger, args):
 
     for seed in seeds:
 
-        train_data = load_data("train", args.k, datasets, seed=seed)
-        test_data = load_data("test", args.k, datasets, seed=seed)
+        train_data = load_data("train", args.k, datasets, args.variant, seed=seed)
+        test_data = load_data("test", args.k, datasets, args.variant, seed=seed)
 
         for dataset in datasets:
             curr_train_data = train_data[dataset]
@@ -183,13 +183,14 @@ if __name__=='__main__':
 
     parser.add_argument("--method", type=str, default="direct")
 
+    parser.add_argument("--variant", type=str, default="random", required=True)
+
     args = parser.parse_args()
 
     handlers = [logging.StreamHandler()]
     if args.log_file is not None:
         handlers.append(logging.FileHandler(args.log_file))
-    logging.basicConfig(filename="logger.log",
-                        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO,
                         handlers=handlers)

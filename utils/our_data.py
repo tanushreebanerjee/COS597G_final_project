@@ -6,13 +6,13 @@ import numpy as np
 import torch
 from collections import Counter
 
-def load_data(split, k, datasets, seed=0):
+def load_data(split, k, datasets, variant, seed=0):
     data = {}
     for dataset in datasets:
         curr_data = []
 
         ## CHANGE WITH BEIQI
-        data_path = os.path.join("data", dataset, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, split))
+        data_path = os.path.join("data", dataset, variant, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, split))
         with open(data_path, "r") as f:
             for line in f:
                 dp = json.loads(line)
