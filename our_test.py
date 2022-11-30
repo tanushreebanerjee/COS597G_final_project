@@ -17,7 +17,7 @@ from transformers import GPT2Tokenizer, AutoTokenizer, GPT2Model
 
 from our_data import GPT2Data
 
-from utils.our_data import load_data
+from utils.our_data import load_data, evaluate
 
 from transformers import pipeline, set_seed
 
@@ -77,7 +77,7 @@ def main(logger, args):
             result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
 
             if result is None:
-                errors.append("%s/%s" % (test_task, seed))
+                errors.append("%s/%s" % (dataset, seed))
             else:
                 results.append(result)
 
