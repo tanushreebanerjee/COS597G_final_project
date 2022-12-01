@@ -170,8 +170,9 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
         generated_sequences = [generated_sequences[0][idx:]]
 
         decoded_outputs = gpt2_tokenizer.batch_decode(generated_sequences, skip_special_tokens=True)
-
-        predictions.append(decoded_outputs)
+        for decoded_output in decoded_outputs:
+            prediction = decoded_output.split("\n")[0]
+            predictions.append(prediction)
 
 
 
