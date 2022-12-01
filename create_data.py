@@ -29,12 +29,14 @@ def main(args):
             "gibberish" # S1, gibberish, S2, S3, gibberish, S4
         ]
 
-    for dataset in datasets for variant in variants for seed in seeds:
-        print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
-        if variant == "gold":
-            create_gold_data(dataset, args.k, int(seed), args.type)
-        else:
-            create_data(dataset, variant, args.k, int(seed), args.type)
+    for dataset in datasets:
+        for variant in variants:
+            for seed in seeds:
+                print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
+                if variant == "gold":
+                    create_gold_data(dataset, args.k, int(seed), args.type)
+                else:
+                    create_data(dataset, variant, args.k, int(seed), args.type)
 
 def create_gold_data(dataset, k, seed):
 
@@ -58,6 +60,7 @@ def create_gold_data(dataset, k, seed):
         for line in f:
             dp = json.loads(line)
             orig_train_data.append(dp)
+    print(orig_train_data[0])
 
     with open(orig_test_data_path, "r") as f: # either train_orig.jsonl or test_orig.jsonl
         for line in f:
@@ -76,6 +79,11 @@ def create_gold_data(dataset, k, seed):
     for i in indices:
         dp = orig_train_data[i]
 
+        if not "answers" in dp:
+            assert "answer" in dp
+            dp["answers"] = dp["answer"]
+
+
         if dataset == "squad":
             new_train_data.append({
                 "context": dp["context"],
@@ -91,6 +99,10 @@ def create_gold_data(dataset, k, seed):
         if i in indices: continue
         dp = orig_train_data[i]
 
+        if not "answers" in dp:
+            assert "answer" in dp
+            dp["answers"] = dp["answer"]
+
         if dataset == "squad":
             new_test_data.append({
                 "context": dp["context"],
@@ -104,6 +116,11 @@ def create_gold_data(dataset, k, seed):
             })
 
     for dp in orig_test_data:
+
+        if not "answers" in dp:
+            assert "answer" in dp
+            dp["answers"] = dp["answer"]
+
         if dataset == "squad":
             new_test_data.append({
                 "context": dp["context"],
@@ -116,8 +133,8 @@ def create_gold_data(dataset, k, seed):
                 "output": dp["answer"]
             })
 
-    if not os.path.isdir("data" / dataset / "gold"):
-        os.makedirs("data" / dataset / "gold")
+    if not os.path.isdir(os.path.join("data", dataset, "gold")):
+        os.makedirs(os.path.join("data", dataset, "gold"))
 
     with open(train_data_path, "w") as f:
         for dp in new_train_data:
@@ -232,8 +249,8 @@ def create_data(dataset, variant, k, seed, type):
             new_data.append(dp)
 
 
-    if not os.path.isdir("data" / dataset / variant):
-        os.makedirs("data" / dataset / variant)
+    if not os.path.isdir(os.path.join("data", dataset, variant)):
+        os.makedirs(os.path.join("data", dataset, variant))
 
     with open(data_path, "w") as f:
         for dp in new_data:
