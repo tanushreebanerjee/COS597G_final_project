@@ -53,7 +53,7 @@ def main(logger, args):
     logger.info("batch_size=%d\tmax_length=%d\tmax_length_per_example=%d" % (args.test_batch_size, max_length, max_length_per_example))
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
-    gpt2_data = GPT2Data(logger, tokenizer, args.method, args.use_demonstrations, args.k, max_length, max_length_per_example)
+    gpt2_data = GPT2Data(logger, tokenizer, args.use_demonstrations, args.k, max_length, max_length_per_example)
 
     results = []
     errors = []
@@ -72,7 +72,7 @@ def main(logger, args):
             ## NUMBER OF DEMONSTRATIONS SHOULD MATCH THE ARGUMENT PROVIDED
             assert not args.use_demonstrations or len(curr_train_data)==args.k
 
-            logger.info("%s - %s on %s (%d train, %d dev)" % (args.gpt2, args.method, args.dataset, len(curr_train_data), len(curr_test_data)))
+            logger.info("%s on %s (%d train, %d dev)" % (args.gpt2, args.dataset, len(curr_train_data), len(curr_test_data)))
 
             result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
 
@@ -92,10 +92,9 @@ def main(logger, args):
 def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, checkpoint, add_newlines):
 
     cache_path = os.path.join(args.out_dir,
-                              "{}-{}-{}{}{}{}.pkl".format(
+                              "{}-{}{}{}{}.pkl".format(
                                   dataset,
                                   "test",
-                                  gpt2_data.method,
                                   "-k={}".format(args.k) if args.use_demonstrations else "",
                                   "-s={}".format(seed) if args.use_demonstrations else "",
                                   "" if add_newlines else "-no-newlines"))
@@ -180,8 +179,6 @@ if __name__=='__main__':
     parser.add_argument("--out_dir", type=str, required=True)
     ## SPECIFY THE MODEL TO RUN
     parser.add_argument("--gpt2", type=str, default="gpt2-large")
-
-    parser.add_argument("--method", type=str, default="direct")
 
     parser.add_argument("--variant", type=str, default="random", required=True)
 

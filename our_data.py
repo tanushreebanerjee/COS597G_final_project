@@ -21,13 +21,12 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 
 class GPT2Data(object):
 
-    def __init__(self, logger=None, tokenizer=None, method="channel", use_demonstrations=True, k=16,
+    def __init__(self, logger=None, tokenizer=None, use_demonstrations=True, k=16,
                  max_length=1024, max_length_per_example=256,
                  do_tensorize=False, tensorize_dir=None, n_process=None, n_gpu=None, local_rank=-1):
 
         self.logger = logger
         self.tokenizer = tokenizer
-        self.method = method
         self.use_demonstrations = use_demonstrations
         self.k = k
         self.max_length = max_length
@@ -52,7 +51,7 @@ class GPT2Data(object):
         return len(self.tensorized_inputs["input_ids"])
 
     def __str__(self):
-        text = "[GPT2Data]: method=%d, "
+        text = "[GPT2Data]: "
         if self.use_demonstrations:
             text += "%d demonstrations\n" % self.k
         else:
@@ -106,71 +105,45 @@ class GPT2Data(object):
         if self.local_rank<=0:
             self.logger.info(text)
 
-    def _prepro_each_datapoint(self, dp, is_first=True, is_training=False, for_demonstrations=False, add_newlines=True):
+    def _prepro_each_datapoint(self, dp, is_first=True, for_demonstrations=False, add_newlines=True):
         dp = dp.copy()
-
         assert type(dp["output"]) == list
-        dp["output"] = dp["output"][0]
 
         ## GPT-J
         if add_newlines:
+            dp["output"] = dp["output"][0]
 
             ## If first demonstration
             ## separate the output of this datapoint
             ## from the input of this datapoint
             if is_first:
-                if self.method=="direct":
-                    dp["output"] = "\n" + dp["output"]
-                elif self.method=="channel":
-                    dp["input"] = "\n" + dp["input"]
-                else:
-                    raise NotImplementedError()
+                dp["output"] = "\n" + dp["output"]
 
             ## If second demonstration or later, or if test datapoint
             ## separate the input of this datapoint
             ## from the output of the previous datapoint
             else:
-                if self.method=="direct":
-                    dp["input"] = "\n\n\n" + dp["input"]
-                    dp["output"] = "\n" + dp["output"]
-                elif self.method=="channel":
-                    dp["output"] = "\n\n\n" + dp["output"]
-                    dp["input"] = "\n" + dp["input"]
-                else:
-                    raise NotImplementedError()
+                dp["input"] = "\n\n\n" + dp["input"]
+                dp["output"] = "\n" + dp["output"]
 
         ## GPT-2
         else:
 
-            ## If first demonstration
-            ## separate the output of this datapoint
-            ## from the input of this datapoint
-            if is_first:
-                if self.method=="direct":
-                    dp["output"] = " " + dp["output"]
-                elif self.method=="channel":
-                    dp["input"] = " " + dp["input"]
-                else:
-                    raise NotImplementedError()
-
-            ## If second demonstration or later, or if test datapoint
-            ## also separate the input of this datapoint
-            ## from the output of the previous datapoint
+            if "context" in dp:
+                dp["input"] = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"]
             else:
-                if self.method=="direct":
-                    dp["input"] = " " + dp["input"]
-                    dp["output"] = " " + dp["output"]
-                elif self.method=="channel":
-                    dp["output"] = " " + dp["output"]
-                    dp["input"] = " " + dp["input"]
-                else:
-                    raise NotImplementedError()
+                dp["input"] = "Question: " + dp["input"] + "\n"
+
+            if for_demonstrations:
+                dp["output"] = "Answer: " + dp["output"][0] + "\n"
+            else:
+                dp["output"] = "Answer: "
 
         input_tokens = self.tokenizer(dp["input"])["input_ids"]
         output_tokens = self.tokenizer(dp["output"])["input_ids"]
 
         ## processing demonstrations
-        if is_training or for_demonstrations:
+        if for_demonstrations:
 
             ## cut off some input if necessary
             if len(input_tokens)>=self.max_length_per_example - 2 - len(output_tokens):
@@ -187,12 +160,7 @@ class GPT2Data(object):
 
             assert len(input_tokens)+2<=self.max_length_per_example, (len(input_tokens), self.max_length_per_example)
 
-        if self.method=="direct":
-            return input_tokens, output_tokens
-        elif self.method=="channel":
-            return output_tokens, input_tokens
-        else:
-            raise NotImplementedError()
+        return input_tokens, output_tokens
 
     def prepro_sentence_pair_single(self, input, max_length, allow_truncation=False):
 
@@ -200,11 +168,9 @@ class GPT2Data(object):
             input = input[len(input)-max_length:]
             assert len(input)==max_length
 
-        n_mask = max_length-len(input)
-        assert n_mask>=0, (max_length, len(input))
-        input_ids = input+[0 for _ in range(n_mask)]
-        attention_mask = [1 for _ in input] + [0 for _ in range(n_mask)]
-        return input_ids, attention_mask
+        attention_mask = [1 for input_ in input]
+
+        return input, attentioN_mask
 
     def tensorize(self, _train_data, _test_data, add_newlines=True):
 
@@ -216,6 +182,7 @@ class GPT2Data(object):
                 if type(dp["output"])==str:
                     dp["output"] = [dp["output"]]
                 train_data.append(dp.copy())
+
         for dp in _test_data:
             assert type(dp)==dict, ("Each example should be a dictionary", dp)
             assert "input" in dp and "output" in dp, ("Test example should contain input and output", dp)
@@ -223,11 +190,8 @@ class GPT2Data(object):
                 dp["output"] = [dp["output"]]
             test_data.append(dp.copy())
 
-        # each datapoint: passage, question, options, output
-        bos_token_id = self.tokenizer.bos_token_id
-        eos_token_id = self.tokenizer.eos_token_id
-
-        input_ids, attention_mask, token_type_ids = [], [], []
+        input_ids = []
+        attention_mask = []
         metadata = []
 
         if self.use_demonstrations:
@@ -248,7 +212,6 @@ class GPT2Data(object):
                 input_ = demonstrations + input_
 
             input_ids_, attention_mask_ = self.prepro_sentence_pair_single(input_, self.max_length, allow_truncation=self.use_demonstrations)
-
             input_ids.append(input_ids_)
             attention_mask.append(attention_mask_)
 
