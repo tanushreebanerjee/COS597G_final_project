@@ -129,7 +129,7 @@ def create_gold_data(dataset, k, seed):
             })
         elif dataset == "nq":
             new_test_data.append({
-                "input": dp["input"],
+                "input": dp["question"],
                 "output": dp["answer"]
             })
 
