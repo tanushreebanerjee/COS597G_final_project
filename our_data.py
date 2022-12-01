@@ -170,7 +170,7 @@ class GPT2Data(object):
 
         attention_mask = [1 for input_ in input]
 
-        return input, attentioN_mask
+        return input, attention_mask
 
     def tensorize(self, _train_data, _test_data, add_newlines=True):
 

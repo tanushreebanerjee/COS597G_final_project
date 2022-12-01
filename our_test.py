@@ -21,7 +21,7 @@ from utils.our_data import load_data, evaluate
 
 from transformers import pipeline, set_seed
 
-MAX_GENERATION_LENGTH = 30
+MAX_GENERATION_LENGTH = 280
 
 def main(logger, args):
 
@@ -59,8 +59,9 @@ def main(logger, args):
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
     gpt2_data = GPT2Data(logger, tokenizer, args.use_demonstrations, args.k, max_length, max_length_per_example)
-
-    results = []
+    accs = []
+    f1s = []
+    #results = []
     errors = []
     seeds = args.seed.split(",")
     datasets = args.dataset.split(",")
@@ -80,15 +81,20 @@ def main(logger, args):
             logger.info("%s on %s (%d train, %d dev)" % (args.gpt2, args.dataset, len(curr_train_data), len(curr_test_data)))
 
             result = run(logger, dataset, gpt2_data, gpt2_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
-
+            #print("result", result)
+            result = list(result)
             if result is None:
                 errors.append("%s/%s" % (dataset, seed))
             else:
-                results.append(result)
+                accs.append(result[0])
+                f1s.append(result[1])
+                #results.append(result)
 
+    
+    print("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(f1s) // len(seeds), 100 * np.mean(f1s)))
+    print("Accuracy of %s over %d target tasks: %.1f" % (args.dataset, len(accs) // len(seeds), 100 * np.mean(accs)))
 
-    print("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(results) // len(seeds), 100 * np.mean(results)))
-    logger.info("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(results) // len(seeds), 100 * np.mean(results)))
+    logger.info("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(f1s) // len(seeds), 100 * np.mean(f1s)))
 
     if len(errors)>0:
         logger.info("You had errors with datasets:", ",".join(errors))
@@ -109,18 +115,19 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     logger.info(cache_path)
     prediction_path = cache_path.replace(".pkl", ".txt")
 
-    if os.path.exists(prediction_path):
-        return 0
+    # UNCOMMENT LATER!!
+    # if os.path.exists(prediction_path):
+    #     return 0
 
-    if os.path.exists(cache_path):
-        with open(cache_path, "rb") as f:
-            losses = pkl.load(f)
-    else:
-        dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
-        for batch in dataloader:
-            input_ids = batch[0]
-            attention_mask = batch[1]
-            print(gpt2_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state)
+    # if os.path.exists(cache_path):
+    #     with open(cache_path, "rb") as f:
+    #         losses = pkl.load(f)
+    # else:
+    #     dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
+    #     for batch in dataloader:
+    #         input_ids = batch[0]
+    #         attention_mask = batch[1]
+    #         print(gpt2_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state)
 
     #return 1
 
@@ -142,29 +149,41 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     ## NEED TO CHANGE EVERYTHING
     #predictions = gpt2_model.do_predict(gpt2_data, losses=losses)
 
-    input_ids = gpt2_data.tensorized_inputs.keys()
+    input_ids = gpt2_data.tensorized_inputs["input_ids"]
     
     # generate up to 30 tokens
-    outputs = gpt2_model.generate(input_ids, do_sample=False, max_length=MAX_GENERATION_LENGTH)
+    #print("len(input_ids[0])", len(input_ids[0]))
+    generation_output = gpt2_model.generate(input_ids, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
+    
+    generated_sequences = generation_output.sequences
+    idx = len(input_ids[0]) - len(generated_sequences[0])
+    #print("idx", idx)
+    generated_sequences = [generated_sequences[0][idx:]]
+    # print("generated_sequences", generated_sequences)
+    # print("len(generated_sequences)", len(generated_sequences), MAX_GENERATION_LENGTH)
     gpt2_tokenizer = gpt2_data.tokenizer
-    decoded_outputs = gpt2_tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    print(decoded_outputs)
-    return 1
+
+    decoded_outputs = gpt2_tokenizer.batch_decode(generated_sequences, skip_special_tokens=True)
+    
+    predictions = decoded_outputs
+
+    #print(predictions) #decoded_outputs
+    
     # tanushree edits end Fri 25 Nov
 
     groundtruths = [dp["output"] for dp in test_data]
 
-
-    perf = evaluate(predictions, groundtruths)
-    logger.info("Accuracy=%s" % perf)
+    accs, f1s = evaluate(predictions, groundtruths)
+    logger.info("Accuracy=%s" % np.mean(accs))
+    logger.info("F1=%s" % np.mean(f1s))
 
     with open(prediction_path, "w") as f:
         for prediction in predictions:
             f.write(prediction)
             f.write("\n")
 
-    return perf
+    return np.mean(accs), np.mean(f1s)
 
 if __name__=='__main__':
 
