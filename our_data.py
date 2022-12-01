@@ -137,7 +137,7 @@ class GPT2Data(object):
             if for_demonstrations:
                 dp["output"] = "Answer: " + dp["output"][0] + "\n"
             else:
-                dp["output"] = "Answer: "
+                dp["output"] = "Answer:"
 
         input_tokens = self.tokenizer(dp["input"])["input_ids"]
         output_tokens = self.tokenizer(dp["output"])["input_ids"]
