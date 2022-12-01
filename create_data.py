@@ -169,7 +169,7 @@ def create_data(dataset, variant, k, seed, type):
             dp = json.loads(line)
             orig_data.append(dp)
 
-    if type == "train"
+    if type == "train":
         assert len(orig_data) == k
 
     if variant in ["random_one_vocab", "random_length_vocab"]:
