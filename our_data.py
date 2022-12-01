@@ -130,14 +130,14 @@ class GPT2Data(object):
         else:
 
             if "context" in dp:
-                dp["input"] = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"]
+                dp["input"] = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
             else:
                 dp["input"] = "Question: " + dp["input"] + "\n"
 
             if for_demonstrations:
                 dp["output"] = "Answer: " + dp["output"][0] + "\n"
             else:
-                dp["output"] = "Answer:"
+                dp["output"] = "Answer: "
 
         input_tokens = self.tokenizer(dp["input"])["input_ids"]
         output_tokens = self.tokenizer(dp["output"])["input_ids"]
@@ -214,7 +214,7 @@ class GPT2Data(object):
             if self.use_demonstrations:
                 input_ = demonstrations + input_
 
-            input_ = input_ + output_
+            #input_ = input_ + output_
 
             input_ids_, attention_mask_ = self.prepro_sentence_pair_single(input_, self.max_length)
             input_ids.append(input_ids_)
