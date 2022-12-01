@@ -13,24 +13,28 @@ from tqdm import tqdm
 from collections import Counter, defaultdict
 
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
-from transformers import GPT2Tokenizer, AutoTokenizer, GPT2Model
-
+from transformers import GPT2Tokenizer, GPT2Model
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from our_data import GPT2Data
 
 from utils.our_data import load_data, evaluate
 
 from transformers import pipeline, set_seed
 
+MAX_GENERATION_LENGTH = 30
+
 def main(logger, args):
 
     if args.gpt2.startswith("gpt2"):
-        tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        #tokenizer = GPT2Tokenizer.from_pretrained(args.gpt2)
         add_newlines = False
     else:
         # args.gpt2=="gpt-j-6B":
         # we are using the HF veresion where GPT-J-6B checkpoint is not officially registered
         # so need to download the model checkpoint and specify checkpoint
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        #tokenizer = AutoTokenizer.from_pretrained("gpt2")
         add_newlines = True
         assert args.checkpoint is not None and os.path.exists(args.checkpoint)
         args.gpt2 = args.checkpoint
@@ -39,7 +43,8 @@ def main(logger, args):
 
     ## TODO: NEED TO CHANGE THIS LINE OF CODE
     #metaicl_model = MetaICLModel(logger, args.out_dir)
-    gpt2_model = GPT2Model.from_pretrained('gpt2')
+    #gpt2_model = GPT2Model.from_pretrained('gpt2')
+    gpt2_model = AutoModelForCausalLM.from_pretrained('gpt2')
 
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
@@ -117,7 +122,7 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
             attention_mask = batch[1]
             print(gpt2_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state)
 
-    return 1
+    #return 1
 
     #tanushree edits start Fri 25 Nov
     #else:
@@ -137,7 +142,15 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     ## NEED TO CHANGE EVERYTHING
     #predictions = gpt2_model.do_predict(gpt2_data, losses=losses)
 
-    predictions = gpt2_model.predict(**gpt2_data)
+    input_ids = gpt2_data.tensorized_inputs.keys()
+    
+    # generate up to 30 tokens
+    outputs = gpt2_model.generate(input_ids, do_sample=False, max_length=MAX_GENERATION_LENGTH)
+    gpt2_tokenizer = gpt2_data.tokenizer
+    decoded_outputs = gpt2_tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    print(decoded_outputs)
+    return 1
     # tanushree edits end Fri 25 Nov
 
     groundtruths = [dp["output"] for dp in test_data]
