@@ -21,8 +21,6 @@ from utils.our_data import load_data, evaluate
 
 from transformers import pipeline, set_seed
 
-MAX_GENERATION_LENGTH = 280
-
 def main(logger, args):
 
     if args.gpt2.startswith("gpt2"):
@@ -49,11 +47,11 @@ def main(logger, args):
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
 
-    max_length_per_example = 256
-    max_length = 256
+    max_length_per_example = 128
+    max_length = 128
     if args.use_demonstrations:
         orig_max_length = max_length
-        max_length = min(max_length * args.k, 1024)
+        max_length = min(max_length * args.k, 128 * 7)
 
     logger.info("batch_size=%d\tmax_length=%d\tmax_length_per_example=%d" % (args.test_batch_size, max_length, max_length_per_example))
 
@@ -90,7 +88,7 @@ def main(logger, args):
                 f1s.append(result[1])
                 #results.append(result)
 
-    
+
     print("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(f1s) // len(seeds), 100 * np.mean(f1s)))
     print("Accuracy of %s over %d target tasks: %.1f" % (args.dataset, len(accs) // len(seeds), 100 * np.mean(accs)))
 
@@ -149,30 +147,47 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     ## NEED TO CHANGE EVERYTHING
     #predictions = gpt2_model.do_predict(gpt2_data, losses=losses)
 
-    input_ids = gpt2_data.tensorized_inputs["input_ids"]
-    
-    # generate up to 30 tokens
-    #print("len(input_ids[0])", len(input_ids[0]))
-    generation_output = gpt2_model.generate(input_ids, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
-    
-    generated_sequences = generation_output.sequences
-    idx = len(input_ids[0]) - len(generated_sequences[0])
-    #print("idx", idx)
-    generated_sequences = [generated_sequences[0][idx:]]
-    # print("generated_sequences", generated_sequences)
-    # print("len(generated_sequences)", len(generated_sequences), MAX_GENERATION_LENGTH)
+    groundtruths = [dp["output"] for dp in test_data]
+    max_gt_length = 0
+    for groundtruth in groundtruths:
+        for gt in groundtruth:
+            max_gt_length = max(max_gt_length, len(gt))
+
+    MAX_GENERATION_LENGTH = min(gpt2_data.max_length + max_gt_length, 1024)
+
     gpt2_tokenizer = gpt2_data.tokenizer
 
+    predictions = []
+    dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
+    for batch in dataloader:
+        input_ids = batch[0]
+        attention_mask = batch[1]
+        generation_output = gpt2_model.generate(input_ids, attention_mask=attention_mask, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
 
-    decoded_outputs = gpt2_tokenizer.batch_decode(generated_sequences, skip_special_tokens=True)
-    
-    predictions = decoded_outputs
+        generated_sequences = generation_output.sequences
+        idx = len(input_ids[0]) - len(generated_sequences[0])
+        #print("idx", idx)
+        generated_sequences = [generated_sequences[0][idx:]]
+
+        decoded_outputs = gpt2_tokenizer.batch_decode(generated_sequences, skip_special_tokens=True)
+
+        predictions.append(decoded_outputs)
+
+
+
+    # generate up to 30 tokens
+    #print("len(input_ids[0])", len(input_ids[0]))
+
+    # print("generated_sequences", generated_sequences)
+    # print("len(generated_sequences)", len(generated_sequences), MAX_GENERATION_LENGTH)
+
+
+
+
 
     #print(predictions) #decoded_outputs
-    
-    # tanushree edits end Fri 25 Nov
 
-    groundtruths = [dp["output"] for dp in test_data]
+    # tanushree edits end Fri 25 Nov
 
     accs, f1s = evaluate(predictions, groundtruths)
     logger.info("Accuracy=%s" % np.mean(accs))

@@ -34,7 +34,7 @@ def main(args):
             for seed in seeds:
                 print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
                 if variant == "gold":
-                    create_gold_data(dataset, args.k, int(seed), args.type)
+                    create_gold_data(dataset, args.k, int(seed))
                 else:
                     create_data(dataset, variant, args.k, int(seed), args.type)
 
