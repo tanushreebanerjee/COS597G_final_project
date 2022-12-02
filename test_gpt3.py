@@ -111,7 +111,8 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, checkpoint, ad
     dataloader = gpt3_model.prepare_data(train_data, test_data, batch_size=args.test_batch_size, max_length=args.max_length)
     predictions, cache = gpt3_model.do_predict(dataloader, MAX_GENERATION_LENGTH)
 
-
+    with open(gpt3_cache_path, "w") as f:	
+        json.dump(cache, f)
 
     for i, prediction in enumerate(predictions):
         lines = [line for line in prediction.split("\n") if line]
