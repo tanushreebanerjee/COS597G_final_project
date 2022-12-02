@@ -148,29 +148,33 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, checkpoint, ad
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--do_zeroshot", default=False, action="store_true")
-    parser.add_argument("--use_demonstrations", default=False, action="store_true")
-    parser.add_argument("--use_calibration", default=False, action="store_true")
-    parser.add_argument("--unseen_domain_only", default=False, action="store_true")
 
+
+    ## WHETHER WE USE DEMONSTRATIONS OR NOT
+    parser.add_argument("--use_demonstrations", default=False, action="store_true")
+    ## SPECIFY PATH TO LOG FILE
     parser.add_argument("--log_file", default=None, type=str)
 
-    parser.add_argument("--task", type=str, default=None)
+    ## LIST OF DATASETS (e.g., QASC, COMMONSENSE_QA)
     parser.add_argument("--dataset", type=str, default=None)
+    ## NUMBER OF DEMONSTRATIONS
     parser.add_argument("--k", type=int, default=16)
-    parser.add_argument("--seed", type=str, default="100")
-
-    parser.add_argument("--test_batch_size", type=int, default=64)
-    parser.add_argument("--global_step", type=str, default=None)
+    ## RANDOM SEED
+    parser.add_argument("--seed", type=str, default="42")
+    ## SUGGESTED VALUES
+    ## 64 / 16 for GPT-2 with no demonstrations / few-shot
+    ## 16 / 4  for GPT-J with no demonstratiosn / few-shot
+    parser.add_argument("--test_batch_size", type=int, default=1)
+    ## STORED MODEL CHECKPOINT (NEEDED IF WE NEED TO RUN GPT-J)
     parser.add_argument("--checkpoint", type=str, default=None)
 
+    ## PATH TO OUTPUT
     parser.add_argument("--out_dir", type=str, required=True)
-
-    parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--is_null", default=False, action="store_true")
-    parser.add_argument("--method", type=str, default="direct", choices=["direct", "channel"])
+    ## SPECIFY THE MODEL TO RUN
     parser.add_argument("--gpt3", type=str, default="davinci", choices=["ada", "babbage", "curie", "davinci"])
-    parser.add_argument("--api", type=str, required=True)
+
+    parser.add_argument("--variant", type=str, default="random", required=True)
+    parser.add_argument("--api", type=str, default="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", required=True)
 
     args = parser.parse_args()
 
