@@ -95,27 +95,8 @@ def create_gold_data(dataset, k, seed):
                 "input": dp["question"],
                 "output": dp["answer"]
             })
-    for i in range(n):
-        if i in indices: continue
-        dp = orig_train_data[i]
 
-        if not "answer" in dp:
-            assert "answers" in dp
-            dp["answer"] = dp["answers"]
-
-        if dataset == "squad":
-            new_test_data.append({
-                "context": dp["context"],
-                "input": dp["question"],
-                "output": dp["answer"]
-            })
-        elif dataset == "nq":
-            new_test_data.append({
-                "input": dp["question"],
-                "output": dp["answer"]
-            })
-
-    for dp in orig_test_data:
+    for dp in orig_test_data[:10000]:
 
         if not "answer" in dp:
             assert "answers" in dp
