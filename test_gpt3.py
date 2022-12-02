@@ -108,7 +108,7 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
 
     MAX_GENERATION_LENGTH = min(max_length + max_gt_length, 1024)
 
-    dataloader = gpt3_model.prepare_data(train_data, test_data, batch_size=args.test_batch_size, max_length=max_length)
+    dataloader = gpt3_model.prepare_data(train_data if args.use_demonstrations else [], test_data, batch_size=args.test_batch_size, max_length=max_length)
     predictions, cache = gpt3_model.do_predict(dataloader, MAX_GENERATION_LENGTH)
 
     with open(gpt3_cache_path, "w") as f:	
