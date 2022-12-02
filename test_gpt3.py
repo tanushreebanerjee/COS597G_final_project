@@ -153,7 +153,7 @@ if __name__=='__main__':
     ## WHETHER WE USE DEMONSTRATIONS OR NOT
     parser.add_argument("--use_demonstrations", default=False, action="store_true")
     ## SPECIFY PATH TO LOG FILE
-    parser.add_argument("--log_file", default=None, type=str)
+    parser.add_argument("--log_file", default="logs", type=str)
 
     ## LIST OF DATASETS (e.g., QASC, COMMONSENSE_QA)
     parser.add_argument("--dataset", type=str, default=None)
@@ -178,13 +178,10 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    handlers = [logging.StreamHandler()]
-    if args.log_file is not None:
-        handlers.append(logging.FileHandler(args.log_file))
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    logging.basicConfig(filename=f"{args.log_file}/{args.dataset}-{args.k}-{args.seed}-{args.variant}-logging.log", 
+                        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO,
-                        handlers=handlers)
+                        level=logging.INFO)
     logger = logging.getLogger(__name__)
     logger.info(args)
 
