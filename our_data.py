@@ -130,7 +130,7 @@ class GPT2Data(object):
         else:
 
             if "context" in dp:
-                dp["input"] = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"]
+                dp["input"] = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
             else:
                 dp["input"] = "Question: " + dp["input"] + "\n"
 
@@ -162,15 +162,18 @@ class GPT2Data(object):
 
         return input_tokens, output_tokens
 
-    def prepro_sentence_pair_single(self, input, max_length, allow_truncation=False):
+    def prepro_sentence_pair_single(self, input, max_length):
 
-        if allow_truncation and len(input) > max_length:
+        if len(input) > max_length:
             input = input[len(input)-max_length:]
             assert len(input)==max_length
 
-        attention_mask = [1 for input_ in input]
+        n_mask = max_length - len(input)
+        assert n_mask >= 0
+        input_ids = input + [0 for _ in range(n_mask)]
+        attention_mask = [1 for _ in input] + [0 for _ in range(n_mask)]
 
-        return input, attention_mask
+        return input_ids, attention_mask
 
     def tensorize(self, _train_data, _test_data, add_newlines=True):
 
@@ -211,7 +214,9 @@ class GPT2Data(object):
             if self.use_demonstrations:
                 input_ = demonstrations + input_
 
-            input_ids_, attention_mask_ = self.prepro_sentence_pair_single(input_, self.max_length, allow_truncation=self.use_demonstrations)
+            #input_ = input_ + output_
+
+            input_ids_, attention_mask_ = self.prepro_sentence_pair_single(input_, self.max_length)
             input_ids.append(input_ids_)
             attention_mask.append(attention_mask_)
 
