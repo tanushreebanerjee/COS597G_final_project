@@ -187,8 +187,8 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
                 predictions.append(lines[0])
             else:
                 line = lines[ans_line_no]
-                index = line.index("Answer: ")
-                predictions.append(line[index + 8:])
+                index = line.index("Answer:")
+                predictions.append(line[index + 7:])
 
 
 
