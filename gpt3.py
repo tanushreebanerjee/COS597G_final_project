@@ -70,7 +70,9 @@ class GPT3Model(object):
             cache.append((inputs, response))
 
             for choice in response["choices"]:
-                predictions.append(choice["text"])
+                completion_start_idx = response["usage"]["prompt_tokens"]
+                prediction = choice["text"][completion_start_idx:]
+                predictions.append(prediction)
 
         return predictions, cache
 
