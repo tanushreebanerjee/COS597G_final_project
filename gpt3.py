@@ -28,13 +28,12 @@ class GPT3Model(object):
                 dp["output"] = dp["output"][0]
 
             if "context" in dp:
-                demonstrations += "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"][0] + "\n\n\n"
+                demonstrations += "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"] + "\n\n\n"
             else:
-                demonstrations += "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"][0] + "\n\n\n"
+                demonstrations += "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"] + "\n\n\n"
 
         # append demonstrations and separate options
         inputs = []
-        outputs = []
         for dp in test_data:
             if "context" in dp:
                 prompt = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
@@ -53,10 +52,9 @@ class GPT3Model(object):
 
         if self.logger is not None:
             self.logger.info("Checking the first example...")
-            self.logger.info(inputs[0] + "" + outputs[0])
+            self.logger.info(inputs[0])
 
         # construct a dataloader
-        dataset = zip(inputs, outputs)
         input_chunks = [inputs[i : i + batch_size] for i in range(0, len(inputs), batch_size)]
         dataloader = [input_chunks[i] for i in range(0, len(input_chunks))]
 
