@@ -89,7 +89,7 @@ def main(logger, args):
 def run(logger, dataset, gpt3_model, train_data, test_data, seed, checkpoint, add_newlines):
 
     cache_path = os.path.join(args.out_dir,
-                              "{}-{}{}{}{}.pkl".format(
+                              "{}-{}{}{}.pkl".format(
                                   dataset,
                                   "test",
                                   "-k={}".format(args.k) if args.use_demonstrations else "",
@@ -173,8 +173,8 @@ if __name__=='__main__':
     ## SPECIFY THE MODEL TO RUN
     parser.add_argument("--gpt3", type=str, default="davinci", choices=["ada", "babbage", "curie", "davinci"])
 
-    parser.add_argument("--variant", type=str, default="random", required=True)
-    parser.add_argument("--api", type=str, default="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", required=True)
+    parser.add_argument("--variant", type=str, default="gold", required=True)
+    parser.add_argument("--api", type=str, default="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")
 
     args = parser.parse_args()
 
