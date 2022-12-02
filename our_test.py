@@ -43,6 +43,8 @@ def main(logger, args):
     #metaicl_model = MetaICLModel(logger, args.out_dir)
     #gpt2_model = GPT2Model.from_pretrained('gpt2')
     gpt2_model = AutoModelForCausalLM.from_pretrained('gpt2')
+    if torch.cuda.is_available():
+        gpt2_model.cuda()
 
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
