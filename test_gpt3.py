@@ -116,6 +116,8 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
 
     for i, prediction in enumerate(predictions):
         lines = [line for line in prediction.split("\n") if line]
+        if len(lines) == 0:
+            lines = [""]
         has_ans = False
         ans_line_no = 0
         for j, line in enumerate(lines):
@@ -128,8 +130,8 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
             predictions[i] = lines[0]
         else:
             line = lines[ans_line_no]
-            index = line.index("Answer: ")
-            predictions[i] = line[index + 8:]
+            index = line.index("Answer:")
+            predictions[i] = line[index + 7:]
 
     with open(gpt3_cache_path, "w") as f:	
         json.dump(cache, f)

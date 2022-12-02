@@ -175,6 +175,8 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
         decoded_outputs = gpt2_tokenizer.batch_decode(generated_sequences, skip_special_tokens=True)
         for decoded_output in decoded_outputs:
             lines = [line for line in decoded_output.split("\n") if line]
+            if len(lines) == 0:
+                lines = [""]
             has_ans = False
             ans_line_no = 0
             for i, line in enumerate(lines):

@@ -71,7 +71,7 @@ class GPT3Model(object):
 
             for choice in response["choices"]:
                 completion_start_token_idx = response["usage"]["prompt_tokens"]
-                completion_start_str_idx = choice["text_offset"][completion_start_token_idx]
+                completion_start_str_idx = choice["logprobs"]["text_offset"][completion_start_token_idx]
                 prediction = choice["text"][completion_start_str_idx:]
                 predictions.append(prediction)
 
