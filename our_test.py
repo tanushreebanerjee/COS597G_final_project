@@ -93,6 +93,7 @@ def main(logger, args):
     print("Accuracy of %s over %d target tasks: %.1f" % (args.dataset, len(accs) // len(seeds), 100 * np.mean(accs)))
 
     logger.info("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(f1s) // len(seeds), 100 * np.mean(f1s)))
+    logger.info("Accuracy of %s over %d target tasks: %.1f" % (args.dataset, len(accs) // len(seeds), 100 * np.mean(accs)))
 
     if len(errors)>0:
         logger.info("You had errors with datasets:", ",".join(errors))
@@ -245,13 +246,10 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    handlers = [logging.StreamHandler()]
-    if args.log_file is not None:
-        handlers.append(logging.FileHandler(args.log_file))
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    logging.basicConfig(filename=f"{args.log_file}/{args.dataset}-{args.k}-{args.seed}-{args.variant}-logging.log", 
+                        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO,
-                        handlers=handlers)
+                        level=logging.INFO)
     logger = logging.getLogger(__name__)
     logger.info(args)
 

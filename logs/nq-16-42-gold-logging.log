@@ -1,0 +1,5 @@
+12/01/2022 22:23:20 - INFO - __main__ - Namespace(use_demonstrations=True, log_file='logs', dataset='nq', k=16, seed='42', test_batch_size=1, checkpoint=None, out_dir='out/gpt2', gpt2='gpt2', variant='gold')
+12/01/2022 22:23:25 - INFO - __main__ - batch_size=1	max_length=896	max_length_per_example=128
+12/01/2022 22:23:26 - INFO - __main__ - gpt2 on nq (16 train, 91519 dev)
+12/01/2022 22:24:01 - INFO - __main__ - out/gpt2/nq-test-k=16-s=42-no-newlines.pkl
+12/01/2022 22:24:01 - INFO - __main__ - torch.Size([91519, 896])
