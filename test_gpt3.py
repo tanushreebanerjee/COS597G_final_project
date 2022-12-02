@@ -65,7 +65,7 @@ def main(logger, args):
 
             logger.info("gpt3 - %s on %s (%d train, %d dev)" % (args.gpt3, args.dataset, len(curr_train_data), len(curr_test_data)))
 
-            result = run(logger, dataset, gpt3_model, curr_train_data, curr_test_data, seed, checkpoint, add_newlines)
+            result = run(logger, dataset, gpt3_model, curr_train_data, curr_test_data, seed, max_length)
             #print("result", result)
             result = list(result)
             if result is None:
@@ -86,7 +86,7 @@ def main(logger, args):
         logger.info("Please see the error messages")
 
 
-def run(logger, dataset, gpt3_model, train_data, test_data, seed, checkpoint, add_newlines):
+def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
 
     cache_path = os.path.join(args.out_dir,
                               "{}-{}{}{}.pkl".format(
@@ -106,7 +106,7 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, checkpoint, ad
         for gt in groundtruth:
             max_gt_length = max(max_gt_length, len(gt))
 
-    MAX_GENERATION_LENGTH = min(args.max_length + max_gt_length, 1024)
+    MAX_GENERATION_LENGTH = min(max_length + max_gt_length, 1024)
 
     dataloader = gpt3_model.prepare_data(train_data, test_data, batch_size=args.test_batch_size, max_length=args.max_length)
     predictions, cache = gpt3_model.do_predict(dataloader, MAX_GENERATION_LENGTH)
