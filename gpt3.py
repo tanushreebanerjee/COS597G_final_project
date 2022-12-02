@@ -24,10 +24,13 @@ class GPT3Model(object):
         # format demonstrations
         demonstrations = ""
         for dp in train_data:
+            if type(dp["output"]) == list:
+                dp["output"] = dp["output"][0]
+
             if "context" in dp:
-                demonstrations += "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"] + "\n\n\n"
+                demonstrations += "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"][0] + "\n\n\n"
             else:
-                demonstrations += "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"] + "\n\n\n"
+                demonstrations += "Question: " + dp["input"] + "\n" + "Answer: " + dp["output"][0] + "\n\n\n"
 
         # append demonstrations and separate options
         inputs = []
