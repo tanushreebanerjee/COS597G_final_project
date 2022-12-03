@@ -164,7 +164,7 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
 
     predictions = []
     dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
-    for batch in dataloader:
+    for idx, batch in enumerate(dataloader):
         input_ids = batch[0].to(deivce)
         attention_mask = batch[1].to(device)
         generation_output = gpt2_model.generate(input_ids, attention_mask=attention_mask, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
@@ -194,17 +194,16 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
                 index = line.index("Answer:")
                 predictions.append(line[index + 7:])
 
-
+        if idx % args.print_freq == 0:
+            accs, f1s = evaluate(predictions, groundtruths)
+            print("At batch %d, Accuracy=%s, F1=%s" % (idx, np.mean(accs), np.mean(f1s)))
+            logger.info("At batch %d, Accuracy=%s, F1=%s" % (idx, np.mean(accs), np.mean(f1s)))
 
     # generate up to 30 tokens
     #print("len(input_ids[0])", len(input_ids[0]))
 
     # print("generated_sequences", generated_sequences)
     # print("len(generated_sequences)", len(generated_sequences), MAX_GENERATION_LENGTH)
-
-
-
-
 
     #print(predictions) #decoded_outputs
 
@@ -249,6 +248,8 @@ if __name__=='__main__':
     parser.add_argument("--gpt2", type=str, default="gpt2-large")
 
     parser.add_argument("--variant", type=str, default="random", required=True)
+    
+    parser.add_argument("--print_freq", type=int, default=200, help="f1s and accs print frequency")
 
     args = parser.parse_args()
 
@@ -258,5 +259,7 @@ if __name__=='__main__':
                         level=logging.INFO)
     logger = logging.getLogger(__name__)
     logger.info(args)
+    
+    logger.info(f"Running on {device}")
 
     main(logger, args)
