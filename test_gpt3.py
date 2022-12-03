@@ -122,7 +122,7 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
         has_ans = False
         ans_line_no = 0
         for j, line in enumerate(lines):
-            if "Answer: " in line:
+            if "Answer:" in line:
                 ans_line_no = j
                 has_ans = True
                 break

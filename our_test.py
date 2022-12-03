@@ -182,7 +182,7 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
             has_ans = False
             ans_line_no = 0
             for i, line in enumerate(lines):
-                if "Answer: " in line:
+                if "Answer:" in line:
                     ans_line_no = i
                     has_ans = True
                     break
