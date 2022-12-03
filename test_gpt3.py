@@ -118,6 +118,7 @@ def run(logger, dataset, gpt3_model, train_data, test_data, seed, max_length):
         lines = [line for line in prediction.split("\n") if line]
         if len(lines) == 0:
             lines = [""]
+            
         has_ans = False
         ans_line_no = 0
         for j, line in enumerate(lines):
