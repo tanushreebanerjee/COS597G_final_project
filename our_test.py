@@ -21,6 +21,8 @@ from utils.our_data import load_data, evaluate
 
 from transformers import pipeline, set_seed
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 def main(logger, args):
 
     if args.gpt2.startswith("gpt2"):
@@ -163,8 +165,8 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
     predictions = []
     dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
     for batch in dataloader:
-        input_ids = batch[0]
-        attention_mask = batch[1]
+        input_ids = batch[0].to(deivce)
+        attention_mask = batch[1].to(device)
         generation_output = gpt2_model.generate(input_ids, attention_mask=attention_mask, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
 
         generated_sequences = generation_output.sequences
