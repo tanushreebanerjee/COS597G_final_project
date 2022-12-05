@@ -32,40 +32,75 @@ def main(args):
     for dataset in datasets:
         for variant in variants:
             for seed in seeds:
-                print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
-                if variant == "gold":
-                    create_gold_data(dataset, args.k, int(seed))
-                else:
-                    create_data(dataset, variant, args.k, int(seed), args.type)
+                    print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
+                    if variant == "gold":
+                        create_gold_data(dataset, args.k, int(seed))
+                    else:
+                        create_data(dataset, variant, args.k, int(seed), "train")
+
+                    create_test_data(dataset, variant, args.k, int(seed))
+
+def create_test_data(dataset, variant, k, seed):
+    output_path = os.path.join("data", dataset, variant, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "test"))
+    if os.path.exists(output_path):
+        print("File %s already exists" % output_path)
+        return
+
+    orig_test_data = []
+    input_path = os.path.join("data", dataset, "test_orig.jsonl")
+    assert os.path.exists(input_path)
+
+    with open(input_path, "r") as f:
+        for line in f:
+            dp = json.loads(line)
+            orig_test_data.append(dp)
+
+    
+    new_test_data = []
+
+    for dp in orig_test_data[:10000]:
+
+        if not "answer" in dp:
+            assert "answers" in dp
+            dp["answer"] = dp["answers"]
+
+        if dataset == "squad":
+            new_test_data.append({
+                "context": dp["context"],
+                "input": dp["question"],
+                "output": dp["answer"]
+            })
+        elif dataset == "nq":
+            new_test_data.append({
+                "input": dp["question"],
+                "output": dp["answer"]
+            })
+
+    if not os.path.isdir(os.path.join("data", dataset, variant)):
+        os.makedirs(os.path.join("data", dataset, variant))
+
+    with open(output_path, "w") as f:
+        for dp in new_test_data:
+            f.write(json.dumps(dp) + "\n")
+    
 
 def create_gold_data(dataset, k, seed):
 
     train_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
-    test_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "test"))
     if os.path.exists(train_data_path):
         print("File %s already exists" % train_data_path)
         return
-    if os.path.exists(test_data_path):
-        print("File %s already exists" % test_data_path)
-        return
 
     orig_train_data_path = os.path.join("data", dataset, "train_orig.jsonl")
-    orig_test_data_path = os.path.join("data", dataset, "test_orig.jsonl")
-    assert os.path.exists(orig_train_data_path) and os.path.exists(orig_test_data_path)
+    assert os.path.exists(orig_train_data_path)
 
     orig_train_data = []
-    orig_test_data = []
 
     with open(orig_train_data_path, "r") as f: # either train_orig.jsonl or test_orig.jsonl
         for line in f:
             dp = json.loads(line)
             orig_train_data.append(dp)
     print(orig_train_data[0])
-
-    with open(orig_test_data_path, "r") as f: # either train_orig.jsonl or test_orig.jsonl
-        for line in f:
-            dp = json.loads(line)
-            orig_test_data.append(dp)
 
     ### randomly choose k data
     k = int(k)
@@ -74,7 +109,6 @@ def create_gold_data(dataset, k, seed):
     indices = np.random.choice(n, k)
 
     new_train_data = []
-    new_test_data = []
 
     for i in indices:
         dp = orig_train_data[i]
@@ -96,24 +130,6 @@ def create_gold_data(dataset, k, seed):
                 "output": dp["answer"]
             })
 
-    for dp in orig_test_data[:10000]:
-
-        if not "answer" in dp:
-            assert "answers" in dp
-            dp["answer"] = dp["answers"]
-
-        if dataset == "squad":
-            new_test_data.append({
-                "context": dp["context"],
-                "input": dp["question"],
-                "output": dp["answer"]
-            })
-        elif dataset == "nq":
-            new_test_data.append({
-                "input": dp["question"],
-                "output": dp["answer"]
-            })
-
     if not os.path.isdir(os.path.join("data", dataset, "gold")):
         os.makedirs(os.path.join("data", dataset, "gold"))
 
@@ -121,20 +137,16 @@ def create_gold_data(dataset, k, seed):
         for dp in new_train_data:
             f.write(json.dumps(dp) + "\n")
 
-    with open(test_data_path, "w") as f:
-        for dp in new_test_data:
-            f.write(json.dumps(dp) + "\n")
 
-
-def create_data(dataset, variant, k, seed, type):
+def create_data(dataset, variant, k, seed):
     np.random.seed(int(seed))
 
-    data_path = os.path.join("data", dataset, variant, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, type))
+    data_path = os.path.join("data", dataset, variant, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
     if os.path.exists(data_path):
         print("File %s already exists" % data_path)
         return
 
-    gold_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, type))
+    gold_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
     if not os.path.exists(gold_data_path):
         create_gold_data(dataset, k, seed)
     assert os.path.exists(gold_data_path)
@@ -150,8 +162,7 @@ def create_data(dataset, variant, k, seed, type):
             dp = json.loads(line)
             orig_data.append(dp)
 
-    if type == "train":
-        assert len(orig_data) == k
+    assert len(orig_data) == k
 
     if variant in ["random_one_vocab", "random_length_vocab"]:
         for dp in orig_data:
@@ -244,9 +255,6 @@ if __name__ == '__main__':
 
     ## list of datasets
     parser.add_argument("--dataset", type=str, default=None, required=True, help="nq or squad")
-    ## train or test
-    parser.add_argument("--type", type=str, default="train", help="The type of data: train or test")
-
     parser.add_argument("--k", type=int, default=16, help="Number of demonstrations")
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
