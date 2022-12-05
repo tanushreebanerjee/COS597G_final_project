@@ -36,12 +36,16 @@ class GPT3Model(object):
         inputs = []
         for dp in test_data:
             if "context" in dp:
-                prompt = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
+                if len(train_data) == 0:
+                    prompt = dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
+                else:
+                    prompt = "Context: " + dp["context"] + "\n" + "Question: " + dp["input"] + "\n"
             else:
                 if len(train_data) == 0:
                     prompt = "Question: " + dp["input"] + "\n" + "Answer: "
                 else:
                     prompt = "Question: " + dp["input"] + "\n"
+
 
             inputs += [demonstrations + prompt]
 
