@@ -14,6 +14,7 @@ def main(args):
     datasets = args.dataset.split(",")
     variants = args.variant.split(",")
     seeds = args.seed.split(",")
+    
 
     for dataset in datasets:
         assert dataset in ['nq', 'squad']
@@ -32,6 +33,8 @@ def main(args):
     for dataset in datasets:
         for variant in variants:
             for seed in seeds:
+                    
+                    np.random.seed(int(seed))
                     print("Creating data for dataset: %s, variant: %s, seed: %s" % (dataset, variant, seed))
                     if variant == "gold":
                         create_gold_data(dataset, args.k, int(seed))
@@ -85,7 +88,7 @@ def create_test_data(dataset, variant, k, seed):
     
 
 def create_gold_data(dataset, k, seed):
-
+    np.random.seed(int(seed))
     train_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
     if os.path.exists(train_data_path):
         print("File %s already exists" % train_data_path)
@@ -140,7 +143,6 @@ def create_gold_data(dataset, k, seed):
 
 def create_data(dataset, variant, k, seed):
     np.random.seed(int(seed))
-
     data_path = os.path.join("data", dataset, variant, "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
     if os.path.exists(data_path):
         print("File %s already exists" % data_path)
