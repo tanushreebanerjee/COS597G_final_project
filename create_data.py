@@ -149,6 +149,7 @@ def create_data(dataset, variant, k, seed):
     gold_data_path = os.path.join("data", dataset, "gold", "{}_{}_{}_{}.jsonl".format(dataset, k, seed, "train"))
     if not os.path.exists(gold_data_path):
         create_gold_data(dataset, k, seed)
+        create_test_data(dataset, "gold", k, seed)
     assert os.path.exists(gold_data_path)
 
 
