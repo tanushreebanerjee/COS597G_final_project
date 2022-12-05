@@ -9,6 +9,8 @@ import re
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
+NUM_TEST_DATA = 1000
+
 def main(args):
 
     datasets = args.dataset.split(",")
@@ -58,7 +60,7 @@ def create_test_data(dataset, variant, k, seed):
     
     new_test_data = []
 
-    for dp in orig_test_data[:10000]:
+    for dp in orig_test_data[:NUM_TEST_DATA]:
 
         if not "answer" in dp:
             assert "answers" in dp
@@ -241,6 +243,19 @@ def create_data(dataset, variant, k, seed):
 
             dp["context"] = ".".join(final_context)
             new_data.append(dp)
+            
+    elif variant == "repeat_one_sent":
+        
+        assert "context" in orig_data[0]
+        
+        for dp in orig_data:
+            sentences = dp["context"].split(".")
+            idx = np.random.randint(len(sentences), size=1)[0]
+            
+            final_context = sentences[:idx] + [sentences[idx]] * (args.repeat_times - 1) + sentences[idx:]
+            
+            dp["context"] = ".".join(final_context)
+            new_data.append(dp)
 
 
     if not os.path.isdir(os.path.join("data", dataset, variant)):
@@ -259,7 +274,7 @@ if __name__ == '__main__':
     parser.add_argument("--k", type=int, default=16, help="Number of demonstrations")
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
-    parser.add_argument("--repeat_times", type=str, default="None")
+    parser.add_argument("--repeat_times", type=int, default=3)
 
 
     args = parser.parse_args()
