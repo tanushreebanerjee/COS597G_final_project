@@ -36,7 +36,7 @@ def main(args):
                     if variant == "gold":
                         create_gold_data(dataset, args.k, int(seed))
                     else:
-                        create_data(dataset, variant, args.k, int(seed), "train")
+                        create_data(dataset, variant, args.k, int(seed))
 
                     create_test_data(dataset, variant, args.k, int(seed))
 
