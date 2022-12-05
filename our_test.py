@@ -164,7 +164,7 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
 
     predictions = []
     dataloader = gpt2_data.get_dataloader(args.test_batch_size, is_training=False)
-    for idx, batch in enumerate(dataloader):
+    for j, batch in enumerate(tqdm(dataloader)):
         input_ids = batch[0].to(device)
         attention_mask = batch[1].to(device)
         generation_output = gpt2_model.generate(input_ids, attention_mask=attention_mask, do_sample=False, max_length=MAX_GENERATION_LENGTH, return_dict_in_generate=True)
@@ -194,10 +194,10 @@ def run(logger, dataset, gpt2_data, gpt2_model, train_data, test_data, seed, che
                 index = line.index("Answer:")
                 predictions.append(line[index + 7:])
 
-        if idx % args.print_freq == 0:
+        if j % args.print_freq == 0:
             accs, f1s = evaluate(predictions, groundtruths)
-            print("At batch %d, Accuracy=%s, F1=%s" % (idx, np.mean(accs), np.mean(f1s)))
-            logger.info("At batch %d, Accuracy=%s, F1=%s" % (idx, np.mean(accs), np.mean(f1s)))
+            print("At batch %d, Accuracy=%s, F1=%s" % (j, np.mean(accs), np.mean(f1s)))
+            logger.info("At batch %d, Accuracy=%s, F1=%s" % (j, np.mean(accs), np.mean(f1s)))
 
     # generate up to 30 tokens
     #print("len(input_ids[0])", len(input_ids[0]))
