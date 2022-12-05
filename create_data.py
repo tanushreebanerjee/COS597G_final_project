@@ -62,9 +62,13 @@ def create_test_data(dataset, variant, k, seed):
 
     
     new_test_data = []
+    
+    indices = np.random.choice(len(orig_test_data), NUM_TEST_DATA)
 
-    for dp in orig_test_data[:NUM_TEST_DATA]:
-
+    for idx in indices:
+        
+        dp = orig_test_data[idx]
+        
         if not "answer" in dp:
             assert "answers" in dp
             dp["answer"] = dp["answers"]
