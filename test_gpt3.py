@@ -73,6 +73,10 @@ def main(logger, args):
             else:
                 accs.append(result[0])
                 f1s.append(result[1])
+                print("------------------------------------------")
+                print("Dataset: %s, Variant: %s, k: %d, seed: %s" % (dataset, args.variant, args.k, seed))
+                print("F1: %.1f" % result[1])
+                print("Acc: %.1f" % result[0])
                 #results.append(result)
 
     print("Macro-F1 of %s over %d target tasks: %.1f" % (args.dataset, len(f1s) // len(seeds), 100 * np.mean(f1s)))
@@ -161,7 +165,7 @@ if __name__=='__main__':
     ## LIST OF DATASETS (e.g., QASC, COMMONSENSE_QA)
     parser.add_argument("--dataset", type=str, default=None)
     ## NUMBER OF DEMONSTRATIONS
-    parser.add_argument("--k", type=int, default=16)
+    parser.add_argument("--k", type=int, default=1)
     ## RANDOM SEED
     parser.add_argument("--seed", type=str, default="42")
     ## SUGGESTED VALUES
