@@ -174,7 +174,7 @@ if __name__=='__main__':
     ## PATH TO OUTPUT
     parser.add_argument("--out_dir", type=str, required=True)
     ## SPECIFY THE MODEL TO RUN
-    parser.add_argument("--gpt3", type=str, default="davinci", choices=["ada", "babbage", "curie", "davinci"])
+    parser.add_argument("--gpt3", type=str, default="curie", choices=["ada", "babbage", "curie", "davinci"])
 
     parser.add_argument("--variant", type=str, default="gold", required=True)
     parser.add_argument("--api", type=str, default="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")
