@@ -177,7 +177,7 @@ if __name__=='__main__':
     parser.add_argument("--gpt3", type=str, default="curie", choices=["ada", "babbage", "curie", "davinci"])
 
     parser.add_argument("--variant", type=str, default="gold", required=True)
-    parser.add_argument("--api", type=str, default="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")
+    parser.add_argument("--api", type=str, default="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")
 
     args = parser.parse_args()
 
