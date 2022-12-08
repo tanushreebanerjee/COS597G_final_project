@@ -9,8 +9,6 @@ import re
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
-NUM_TEST_DATA = 1000
-
 def main(args):
 
     datasets = args.dataset.split(",")
@@ -63,7 +61,10 @@ def create_test_data(dataset, variant, k, seed):
     
     new_test_data = []
     
-    indices = np.random.choice(len(orig_test_data), NUM_TEST_DATA)
+    if num_test_data:
+        indices = np.random.choice(len(orig_test_data), num_test_data)
+    else:
+        indices = np.arange(len(orig_test_data))
 
     for idx in indices:
         
@@ -281,7 +282,12 @@ if __name__ == '__main__':
     parser.add_argument("--seed", type=str, default="42")
     parser.add_argument("--variant", type=str, default="random", required=True)
     parser.add_argument("--repeat_times", type=int, default=3)
+    parser.add_argument("--num_test_data", type=int, default=None)
 
+    global num_test_data
 
     args = parser.parse_args()
+    
+    num_test_data = args.num_test_data
+    
     main(args)
